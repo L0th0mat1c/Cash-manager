@@ -1,0 +1,16 @@
+FROM maven:3.8-openjdk-11 AS builder
+
+WORKDIR /app/
+
+COPY . .
+
+RUN mvn dependency:resolve -DskipTests
+
+RUN mvn package -DskipTests
+
+
+FROM openjdk:11
+
+COPY --from=builder /app/target/*.jar /app/
+
+CMD  ["java", "-Xmx8g", "-jar", "/app/cashmanager-0.0.1-SNAPSHOT.jar"]

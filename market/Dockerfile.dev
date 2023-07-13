@@ -1,0 +1,9 @@
+FROM golang:1.17.3-stretch
+
+WORKDIR /app
+
+COPY . .
+
+RUN go get -u github.com/cosmtrek/air && go get -u github.com/swaggo/swag/cmd/swag
+
+CMD swag init && air

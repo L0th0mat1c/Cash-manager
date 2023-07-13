@@ -1,0 +1,25 @@
+name: mobileapp
+description: A new Flutter project.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  provider: ^6.0.1
+  page_transition: ^2.0.4
+  google_fonts: ^2.1.0
+  http: ^0.13.0
+  flutter_secure_storage: ^5.0.2
+  qr_code_scanner: 0.6.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

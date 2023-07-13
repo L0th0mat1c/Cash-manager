@@ -1,0 +1,93 @@
+version: '3'
+
+services:
+  nginx:
+    restart: always
+    image: nginx:1.21
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    networks:
+      - back-tier
+    depends_on:
+      - cashmanager-api
+      - market-api
+
+  cashmanager-mysql:
+    restart: always
+    image: mariadb:10.5.8
+    container_name: cashmanager-mysql
+    environment:
+        - MYSQL_ROOT_PASSWORD=${DATABASE_ROOT_PASSWORD}
+        - MYSQL_DATABASE=${DATABASE_NAME}
+        - MYSQL_USER=${DATABASE_USER}
+        - MYSQL_PASSWORD=${DATABASE_PASSWORD}
+    networks:
+      - db-tier
+    volumes:
+      - ./bank.sql:/docker-entrypoint-initdb.d/schema.sql
+      - data-mariadb:/var/lib/mysql
+      - backup-mariadb:/backup
+
+  cashmanager-api:
+    restart: always
+    build:
+      context: ./back
+      dockerfile: Dockerfile.prod
+    container_name: cashmanager-api
+    networks:
+      - db-tier
+      - back-tier
+    depends_on:
+      - cashmanager-mysql
+
+  market-db:
+    restart: always
+    image: postgres:bullseye
+    container_name: market-db
+    environment:
+        POSTGRES_USER: '${POSTGRES_USER}'
+        POSTGRES_DB: '${POSTGRES_DB}'
+        POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+    volumes:
+        - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+        - "backup-postgres:/var/lib/postgresql/data"
+    networks:
+        - db-tier
+
+  market-api:
+    restart: always
+    build:
+      context: ./market
+      dockerfile: Dockerfile.prod
+    container_name: market-api
+    env_file:
+      - market/prod.env
+    volumes:
+      - ./build:/usr/apk
+    networks:
+      - db-tier
+      - back-tier
+    depends_on:
+      - market-db
+
+  cashmanager-mobile:
+    build:
+      context: ./mobile
+    container_name: cashmanager-mobile
+    volumes:
+      - ./build:/usr/apk/
+
+networks:
+  db-tier:
+    driver: bridge
+  back-tier:
+    driver: bridge
+
+volumes:
+  cashmanager-apk:
+  data-mariadb:
+  backup-mariadb:
+  backup-postgres:

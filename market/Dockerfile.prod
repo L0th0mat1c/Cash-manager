@@ -1,0 +1,17 @@
+FROM golang:1.17.3-stretch as build
+
+WORKDIR /build
+
+RUN mkdir /app
+
+COPY . .
+
+RUN go get -u github.com/swaggo/swag/cmd/swag && swag init
+
+RUN go build -o /app/api main.go
+
+WORKDIR /app
+
+RUN rm -rf /build
+
+CMD ["/app/api"]

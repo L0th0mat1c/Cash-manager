@@ -1,0 +1,92 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx:1.21
+    container_name: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "80:80"
+    networks:
+      - back-tier
+    depends_on:
+      - cashmanager-api
+      - market-api
+
+  cashmanager-mysql:
+    image: mariadb:10.5.8
+    container_name: cashmanager-mysql
+    environment:
+        - MYSQL_ROOT_PASSWORD=${DATABASE_ROOT_PASSWORD}
+        - MYSQL_DATABASE=${DATABASE_NAME}
+        - MYSQL_USER=${DATABASE_USER}
+        - MYSQL_PASSWORD=${DATABASE_PASSWORD}
+    ports:
+      - 3306:3306
+    networks:
+      - db-tier
+    volumes:
+      - data-mariadb:/var/lib/mysql
+      - backup-mariadb:/backup
+
+  cashmanager-api:
+    build:
+      context: ./back
+      dockerfile: Dockerfile.${APP_ENV:-prod}
+    container_name: cashmanager-api
+    volumes:
+      - ./build:/usr/apk
+    networks:
+      - db-tier
+      - back-tier
+    depends_on:
+      - cashmanager-mysql
+
+  market-db:
+    restart: always
+    image: postgres:bullseye
+    container_name: market-db
+    environment:
+        POSTGRES_USER: '${POSTGRES_USER}'
+        POSTGRES_DB: '${POSTGRES_DB}'
+        POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+    volumes:
+        - "backup-postgres:/var/lib/postgresql/data"
+        - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+        - db-tier
+
+  market-api:
+    build:
+      context: ./market
+      dockerfile: Dockerfile.${APP_ENV:-prod}
+    container_name: market-api
+    env_file:
+      - market/${APP_ENV:-prod}.env
+    volumes:
+      - ./market:/app
+      - ./build:/usr/apk
+    networks:
+      - db-tier
+      - back-tier
+    depends_on:
+      - market-db
+
+  cashmanager-mobile:
+    build:
+      context: ./mobile
+    container_name: cashmanager-mobile
+    volumes:
+      - ./build:/usr/apk/
+
+networks:
+  db-tier:
+    driver: bridge
+  back-tier:
+    driver: bridge
+
+volumes:
+  data-mariadb:
+  backup-mariadb:
+  backup-postgres:
